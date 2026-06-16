@@ -1641,16 +1641,19 @@ function endGame() {
   const total = rightCount + wrongCount;
   const acc = total > 0 ? Math.round(rightCount / total * 100) : 100;
 
+  const nonAnchorWords = allWords.length - 10;
+  const nonAnchorAcc = Math.round(rightCount / nonAnchorWords * 100);
+
   let rating = '🌟';
-  if (acc >= 90 && wrongCount <= 2) rating = '🏆 完美通关！';
-  else if (acc >= 75) rating = '⭐ 优秀！';
-  else if (acc >= 60) rating = '👍 不错！';
+  if (nonAnchorAcc >= 90 && wrongCount <= 2) rating = '🏆 完美通关！';
+  else if (nonAnchorAcc >= 75) rating = '⭐ 优秀！';
+  else if (nonAnchorAcc >= 60) rating = '👍 不错！';
   else rating = '💪 继续加油！';
 
   document.getElementById('endRound').textContent = `第 ${round} 轮完成`;
-  document.getElementById('endScore').textContent = `${acc}%`;
+  document.getElementById('endScore').textContent = `${nonAnchorAcc}%`;
   document.getElementById('endDetail').innerHTML =
-    `答对 <strong>${rightCount}</strong> 次 · 答错 <strong>${wrongCount}</strong> 次 · 最高连击 <strong>${maxCombo}</strong> · 用时 <strong>${formatTime(timerSeconds)}</strong><br>${rating}`;
+    `找对 <strong>${rightCount}</strong> 个 · 选错 <strong>${wrongCount}</strong> 个 · 总词数 <strong>${nonAnchorWords}</strong>（不含10个首词）· 最高连击 <strong>${maxCombo}</strong> · 用时 <strong>${formatTime(timerSeconds)}</strong><br>${rating}`;
   document.getElementById('endXp').textContent = `+${roundXP} XP`;
 
   const missedSection = document.getElementById('endMissedSection');
