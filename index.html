@@ -752,7 +752,6 @@
 
     <!-- Actions -->
     <div class="action-row" id="actionRow">
-      <button class="btn-outline" onclick="skipGroup()">放弃这组</button>
       <button class="btn-primary" onclick="confirmGroup()">继续 →</button>
     </div>
 
@@ -1354,6 +1353,7 @@ let activeGroups = [], allWords = [], wordToGroup = {};
 let anchorGroupIdx = null, currentChain = [], usedWords = new Set();
 let combo = 0;
 let maxCombo = 0;
+let groupWrongCount = 0;
 
 function shuffle(arr) {
   const a = [...arr];
@@ -1370,6 +1370,7 @@ function startGame() {
   allMissedWords = [];
   anchorGroupIdx = null; currentChain = []; usedWords = new Set();
   combo = 0; maxCombo = 0; roundXP = 0;
+  groupWrongCount = 0;
 
   const indices = shuffle([...Array(ALL_GROUPS.length).keys()]).slice(0, 10);
   activeGroups = indices.map(i => ALL_GROUPS[i]);
@@ -1430,6 +1431,7 @@ function handleWordClick(word, event) {
   if (anchorGroupIdx === null) {
     anchorGroupIdx = gi;
     currentChain = [word];
+    groupWrongCount = 0;
     const btn = getBtn(word);
     btn.classList.add('anchor');
     btn.disabled = true;
@@ -1437,7 +1439,8 @@ function handleWordClick(word, event) {
     document.getElementById('chainBox').classList.add('show');
     document.getElementById('actionRow').classList.add('show');
     renderChain();
-    setHint(`🔍 "${word}" 已选为参照词，找出所有与它同义的词！`);
+    const grpSize = activeGroups[gi].length;
+    setHint(`🔍 "${word}" 已选为参照词，共 ${grpSize} 个同义词，还剩 ${grpSize - 1} 个`);
     hideFeedback();
   } else {
     if (gi === anchorGroupIdx) {
@@ -1475,15 +1478,20 @@ function handleWordClick(word, event) {
 
       playSound('correct');
 
-      const remaining = activeGroups[anchorGroupIdx].filter(
+      const grp = activeGroups[anchorGroupIdx];
+      const remaining = grp.filter(
         w => !usedWords.has(w) && !currentChain.includes(w)
       );
       if (remaining.length === 0) {
-        showFeedback('🎉 这组同义词已全部找到！点击"继续"', 'ok');
+        // 全部选对，自动进入下一组
+        showFeedback(`🎉 这组 ${grp.length} 个同义词全部找到！自动进入下一组`, 'ok');
         playSound('complete');
         spawnParticleBurst(window.innerWidth / 2, window.innerHeight / 2, 50, ['#fbbf24','#f59e0b','#22d3a7','#8b5cf6','#38bdf8'], ['star','diamond']);
         addXP(15);
+        updateStats();
+        setTimeout(() => finishGroup(), 1200);
       } else {
+        setHint(`🔍 已找到 ${currentChain.length} / ${grp.length}，还剩 ${remaining.length} 个`);
         showFeedback(`✅ 正确！还有 ${remaining.length} 个同义词待发现`, 'ok');
       }
     } else {
@@ -1491,6 +1499,7 @@ function handleWordClick(word, event) {
       recordAnswer(false, { word: word });
       combo = 0;
       document.getElementById('comboDisplay').classList.remove('active');
+      groupWrongCount++;
 
       const btn = getBtn(word);
       btn.classList.add('wrong');
@@ -1506,7 +1515,13 @@ function handleWordClick(word, event) {
 
       playSound('wrong');
       // 无提示版：不显示正确答案
-      showFeedback(`❌ "${word}" 不属于这组，继续找！`, 'err');
+      if (groupWrongCount >= 3) {
+        showFeedback(`❌ 已选错 3 次，自动跳过这组`, 'err');
+        updateStats();
+        setTimeout(() => finishGroup(), 800);
+      } else {
+        showFeedback(`❌ "${word}" 不属于这组，已选错 ${groupWrongCount}/3 次`, 'err');
+      }
     }
     updateStats();
   }
@@ -1525,16 +1540,9 @@ function renderChain() {
 }
 
 function confirmGroup() {
+  // 旧版保留兼容：用户点击"继续"按钮时手动结束当前组
   if (anchorGroupIdx === null) return;
   playSound('click');
-  finishGroup();
-}
-
-function skipGroup() {
-  if (anchorGroupIdx === null) return;
-  playSound('skip');
-  combo = 0;
-  document.getElementById('comboDisplay').classList.remove('active');
   finishGroup();
 }
 
@@ -1568,7 +1576,7 @@ function finishGroup() {
   if (remaining.length === 0) {
     endGame();
   } else {
-    setHint('🎯 选择下一个单词，开始新的同义词组！');
+    setHint('🎯 点击任意单词，开始新的同义词组！');
   }
 }
 
