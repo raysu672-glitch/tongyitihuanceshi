@@ -1515,6 +1515,11 @@ function handleWordClick(word, event) {
 
       playSound('wrong');
       // 无提示版：不显示正确答案
+      const grpWrong = activeGroups[anchorGroupIdx];
+      const remainingWrong = grpWrong.filter(
+        w => !usedWords.has(w) && !currentChain.includes(w)
+      );
+      setHint(`🔍 已找到 ${currentChain.length} / ${grpWrong.length}，还剩 ${remainingWrong.length} 个`);
       if (groupWrongCount >= 3) {
         showFeedback(`❌ 已选错 3 次，自动跳过这组`, 'err');
         updateStats();
